@@ -1,0 +1,67 @@
+env: []
+resources:
+  cpu: 0.25
+  max_mem: 0.5
+expose:
+- name: default
+  port: 80
+  health_check:
+    type: http
+    path: /_health
+team: 'eng-infra'
+autoscaling:
+  metric: cpu
+  metric_target: 50
+  min_count: 2
+# for the full spec on alarms, see catapult's swagger.yml definition for Alarm
+#    link: https://github.com/Clever/catapult/blob/master/swagger.yml
+#    best practices: https://clever.atlassian.net/wiki/spaces/~620990898/pages/904036784/Alarm+Best+Practices
+alarms:
+- type: InternalErrorAlarm
+  severity: critical
+  parameters:
+    threshold: 0.05
+  extraParameters:
+    source: Total
+    errorMinimum: 20
+- type: InternalErrorAlarm
+  severity: major
+  parameters:
+    threshold: 0.01
+  extraParameters:
+    source: Total
+- type: InternalErrorAlarm
+  severity: major
+  parameters:
+    threshold: 0.002
+    evaluationPeriods: 5
+  extraParameters:
+    source: Total
+- type: InternalErrorAlarm
+  severity: minor
+  parameters:
+    threshold: 0.001
+  extraParameters:
+    source: Total
+- type: BadRequestAlarm
+  severity: major
+  parameters:
+    threshold: 0.15
+  extraParameters:
+    errorMinimum: 20
+- type: BadRequestAlarm
+  severity: minor
+  parameters:
+    threshold: 0.05
+  extraParameters:
+    errorMinimum: 5
+pod_config:
+  group: us-west-1
+deploy_config:
+  canaryInProd: true
+  autoDeployEnvs:
+  - production
+  - clever-dev
+mesh_config:
+  dev:
+    state: hybrid
