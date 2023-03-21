@@ -4,13 +4,17 @@ import (
 	"context"
 	"flag"
 	"log"
+	"os"
 	"time"
 
 	"github.com/Clever/breakdown/gen-go/models"
 	"github.com/Clever/breakdown/gen-go/server"
-	"github.com/Clever/wag/swagger"
+	"github.com/Clever/breakdown/gen-go/servertracing"
 	"github.com/Clever/kayvee-go/v7/logger"
 	"github.com/Clever/kayvee-go/v7/middleware"
+	"github.com/Clever/wag/swagger"
+	trace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // MyController implements server.Controller
@@ -63,8 +67,6 @@ func main() {
 		defer exp.Shutdown(context.Background())
 		defer prov.Shutdown(context.Background())
 	}
-
-	
 
 	middleware.EnableRollups(context.Background(), logger.NewConcreteLogger("breakdown"), 20*time.Second)
 
