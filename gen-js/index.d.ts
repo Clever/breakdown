@@ -58,13 +58,9 @@ declare class Breakdown {
   
   healthCheck(options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
-  getThings(options?: RequestOptions, cb?: Callback<models.Thing[]>): Promise<models.Thing[]>
+  postCustom(customData?: models.CustomData, options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
-  deleteThing(id: string, options?: RequestOptions, cb?: Callback<void>): Promise<void>
-  
-  getThing(id: string, options?: RequestOptions, cb?: Callback<models.Thing>): Promise<models.Thing>
-  
-  createOrUpdateThing(params: models.CreateOrUpdateThingParams, options?: RequestOptions, cb?: Callback<models.Thing>): Promise<models.Thing>
+  postUpload(packageFiles?: models.RepoPackageFiles, options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
 }
 
@@ -98,27 +94,39 @@ declare namespace Breakdown {
   constructor(body: ErrorBody);
 }
     
-    class NotFound {
-  code?: models.ErrorCode;
-  message?: string;
-
-  constructor(body: ErrorBody);
-}
-    
   }
 
   namespace Models {
     
-    type CreateOrUpdateThingParams = {
-  thing?: Thing;
-  id: string;
+    type CustomData = {
+  commit_sha: string;
+  data: JSONObject;
+  repo_name: string;
 };
     
     type ErrorCode = ("InvalidID");
     
-    type Thing = {
-  foo?: string;
-  id?: string;
+    type JSONObject = {
+  [key: string]: {
+  [key: string]: any;
+};
+};
+    
+    type RepoPackageFile = {
+  error?: string;
+  go_version?: string;
+  name: string;
+  packages: RepoPackages;
+  path: string;
+};
+    
+    type RepoPackageFiles = RepoPackageFile[];
+    
+    type RepoPackages = {
+  dependencies?: string[];
+  is_local?: boolean;
+  name?: string;
+  version?: string;
 };
     
     type UnknownResponse = {

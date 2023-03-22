@@ -1,3 +1,4 @@
+//go:build tools
 // +build tools
 
 package tools
@@ -10,4 +11,6 @@ import (
 	_ "github.com/get-woke/woke"
 	_ "github.com/golang/mock/gomock"
 	_ "github.com/golang/mock/mockgen"
+	_ "github.com/kyleconroy/sqlc/cmd/sqlc"
+	_ "github.com/nomad-software/vend"
 )

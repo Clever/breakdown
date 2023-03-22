@@ -144,24 +144,14 @@ func newRouter(c Controller) *mux.Router {
 		h.HealthCheckHandler(r.Context(), w, r)
 	})
 
-	router.Methods("GET").Path("/v2/things").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.FromContext(r.Context()).AddContext("op", "getThings")
-		h.GetThingsHandler(r.Context(), w, r)
+	router.Methods("PUT").Path("/v1/custom").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.FromContext(r.Context()).AddContext("op", "postCustom")
+		h.PostCustomHandler(r.Context(), w, r)
 	})
 
-	router.Methods("DELETE").Path("/v2/things/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.FromContext(r.Context()).AddContext("op", "deleteThing")
-		h.DeleteThingHandler(r.Context(), w, r)
-	})
-
-	router.Methods("GET").Path("/v2/things/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.FromContext(r.Context()).AddContext("op", "getThing")
-		h.GetThingHandler(r.Context(), w, r)
-	})
-
-	router.Methods("PUT").Path("/v2/things/{id}").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		logger.FromContext(r.Context()).AddContext("op", "createOrUpdateThing")
-		h.CreateOrUpdateThingHandler(r.Context(), w, r)
+	router.Methods("POST").Path("/v1/upload").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.FromContext(r.Context()).AddContext("op", "postUpload")
+		h.PostUploadHandler(r.Context(), w, r)
 	})
 
 	return router

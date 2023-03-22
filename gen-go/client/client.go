@@ -259,135 +259,41 @@ func (c *WagClient) doHealthCheckRequest(ctx context.Context, req *http.Request,
 	}
 }
 
-// GetThings makes a GET request to /v2/things
-//
-// 200: []models.Thing
-// 400: *models.BadRequest
-// 500: *models.InternalError
-// default: client side HTTP errors, for example: context.DeadlineExceeded.
-func (c *WagClient) GetThings(ctx context.Context) ([]models.Thing, error) {
-	headers := make(map[string]string)
-
-	var body []byte
-	path := c.basePath + "/v2/things"
-
-	req, err := http.NewRequestWithContext(ctx, "GET", path, bytes.NewBuffer(body))
-
-	if err != nil {
-		return nil, err
-	}
-
-	return c.doGetThingsRequest(ctx, req, headers)
-}
-
-func (c *WagClient) doGetThingsRequest(ctx context.Context, req *http.Request, headers map[string]string) ([]models.Thing, error) {
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Canonical-Resource", "getThings")
-	req.Header.Set(VersionHeader, Version)
-
-	for field, value := range headers {
-		req.Header.Set(field, value)
-	}
-
-	// Add the opname for doers like tracing
-	ctx = context.WithValue(ctx, opNameCtx{}, "getThings")
-	req = req.WithContext(ctx)
-	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
-	// until we've finished all the processing of the request object. Otherwise we'll cancel
-	// our own request before we've finished it.
-	if c.defaultTimeout != 0 {
-		ctx, cancel := context.WithTimeout(req.Context(), c.defaultTimeout)
-		defer cancel()
-		req = req.WithContext(ctx)
-	}
-
-	resp, err := c.requestDoer.Do(c.client, req)
-	retCode := 0
-	if resp != nil {
-		retCode = resp.StatusCode
-	}
-
-	// log all client failures and non-successful HT
-	logData := map[string]interface{}{
-		"backend":     "breakdown",
-		"method":      req.Method,
-		"uri":         req.URL,
-		"status_code": retCode,
-	}
-	if err == nil && retCode > 399 {
-		logData["message"] = resp.Status
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-	}
-	if err != nil {
-		logData["message"] = err.Error()
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	switch resp.StatusCode {
-
-	case 200:
-
-		var output []models.Thing
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-
-		return output, nil
-
-	case 400:
-
-		var output models.BadRequest
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	case 500:
-
-		var output models.InternalError
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	default:
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
-	}
-}
-
-// DeleteThing makes a DELETE request to /v2/things/{id}
-//
+// PostCustom makes a PUT request to /v1/custom
+// upload or replace custom data for a given repo and commit SHA
 // 200: nil
 // 400: *models.BadRequest
-// 404: *models.NotFound
 // 500: *models.InternalError
 // default: client side HTTP errors, for example: context.DeadlineExceeded.
-func (c *WagClient) DeleteThing(ctx context.Context, id string) error {
+func (c *WagClient) PostCustom(ctx context.Context, i *models.CustomData) error {
 	headers := make(map[string]string)
 
 	var body []byte
-	path, err := models.DeleteThingInputPath(id)
+	path := c.basePath + "/v1/custom"
+
+	if i != nil {
+
+		var err error
+		body, err = json.Marshal(i)
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "PUT", path, bytes.NewBuffer(body))
 
 	if err != nil {
 		return err
 	}
 
-	path = c.basePath + path
-
-	req, err := http.NewRequestWithContext(ctx, "DELETE", path, bytes.NewBuffer(body))
-
-	if err != nil {
-		return err
-	}
-
-	return c.doDeleteThingRequest(ctx, req, headers)
+	return c.doPostCustomRequest(ctx, req, headers)
 }
 
-func (c *WagClient) doDeleteThingRequest(ctx context.Context, req *http.Request, headers map[string]string) error {
+func (c *WagClient) doPostCustomRequest(ctx context.Context, req *http.Request, headers map[string]string) error {
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Canonical-Resource", "deleteThing")
+	req.Header.Set("Canonical-Resource", "postCustom")
 	req.Header.Set(VersionHeader, Version)
 
 	for field, value := range headers {
@@ -395,7 +301,7 @@ func (c *WagClient) doDeleteThingRequest(ctx context.Context, req *http.Request,
 	}
 
 	// Add the opname for doers like tracing
-	ctx = context.WithValue(ctx, opNameCtx{}, "deleteThing")
+	ctx = context.WithValue(ctx, opNameCtx{}, "postCustom")
 	req = req.WithContext(ctx)
 	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
 	// until we've finished all the processing of the request object. Otherwise we'll cancel
@@ -443,9 +349,105 @@ func (c *WagClient) doDeleteThingRequest(ctx context.Context, req *http.Request,
 		}
 		return &output
 
-	case 404:
+	case 500:
 
-		var output models.NotFound
+		var output models.InternalError
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			return err
+		}
+		return &output
+
+	default:
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
+	}
+}
+
+// PostUpload makes a POST request to /v1/upload
+// upload a package-type file, generated by breakdown-cli
+// 200: nil
+// 400: *models.BadRequest
+// 500: *models.InternalError
+// default: client side HTTP errors, for example: context.DeadlineExceeded.
+func (c *WagClient) PostUpload(ctx context.Context, i *models.RepoPackageFiles) error {
+	headers := make(map[string]string)
+
+	var body []byte
+	path := c.basePath + "/v1/upload"
+
+	if i != nil {
+
+		var err error
+		body, err = json.Marshal(i)
+
+		if err != nil {
+			return err
+		}
+
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", path, bytes.NewBuffer(body))
+
+	if err != nil {
+		return err
+	}
+
+	return c.doPostUploadRequest(ctx, req, headers)
+}
+
+func (c *WagClient) doPostUploadRequest(ctx context.Context, req *http.Request, headers map[string]string) error {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Canonical-Resource", "postUpload")
+	req.Header.Set(VersionHeader, Version)
+
+	for field, value := range headers {
+		req.Header.Set(field, value)
+	}
+
+	// Add the opname for doers like tracing
+	ctx = context.WithValue(ctx, opNameCtx{}, "postUpload")
+	req = req.WithContext(ctx)
+	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
+	// until we've finished all the processing of the request object. Otherwise we'll cancel
+	// our own request before we've finished it.
+	if c.defaultTimeout != 0 {
+		ctx, cancel := context.WithTimeout(req.Context(), c.defaultTimeout)
+		defer cancel()
+		req = req.WithContext(ctx)
+	}
+
+	resp, err := c.requestDoer.Do(c.client, req)
+	retCode := 0
+	if resp != nil {
+		retCode = resp.StatusCode
+	}
+
+	// log all client failures and non-successful HT
+	logData := map[string]interface{}{
+		"backend":     "breakdown",
+		"method":      req.Method,
+		"uri":         req.URL,
+		"status_code": retCode,
+	}
+	if err == nil && retCode > 399 {
+		logData["message"] = resp.Status
+		c.logger.Log(wcl.Error, "client-request-finished", logData)
+	}
+	if err != nil {
+		logData["message"] = err.Error()
+		c.logger.Log(wcl.Error, "client-request-finished", logData)
+		return err
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+
+	case 200:
+
+		return nil
+
+	case 400:
+
+		var output models.BadRequest
 		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
 			return err
 		}
@@ -462,234 +464,6 @@ func (c *WagClient) doDeleteThingRequest(ctx context.Context, req *http.Request,
 	default:
 		bs, _ := ioutil.ReadAll(resp.Body)
 		return models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
-	}
-}
-
-// GetThing makes a GET request to /v2/things/{id}
-//
-// 200: *models.Thing
-// 400: *models.BadRequest
-// 404: *models.NotFound
-// 500: *models.InternalError
-// default: client side HTTP errors, for example: context.DeadlineExceeded.
-func (c *WagClient) GetThing(ctx context.Context, id string) (*models.Thing, error) {
-	headers := make(map[string]string)
-
-	var body []byte
-	path, err := models.GetThingInputPath(id)
-
-	if err != nil {
-		return nil, err
-	}
-
-	path = c.basePath + path
-
-	req, err := http.NewRequestWithContext(ctx, "GET", path, bytes.NewBuffer(body))
-
-	if err != nil {
-		return nil, err
-	}
-
-	return c.doGetThingRequest(ctx, req, headers)
-}
-
-func (c *WagClient) doGetThingRequest(ctx context.Context, req *http.Request, headers map[string]string) (*models.Thing, error) {
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Canonical-Resource", "getThing")
-	req.Header.Set(VersionHeader, Version)
-
-	for field, value := range headers {
-		req.Header.Set(field, value)
-	}
-
-	// Add the opname for doers like tracing
-	ctx = context.WithValue(ctx, opNameCtx{}, "getThing")
-	req = req.WithContext(ctx)
-	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
-	// until we've finished all the processing of the request object. Otherwise we'll cancel
-	// our own request before we've finished it.
-	if c.defaultTimeout != 0 {
-		ctx, cancel := context.WithTimeout(req.Context(), c.defaultTimeout)
-		defer cancel()
-		req = req.WithContext(ctx)
-	}
-
-	resp, err := c.requestDoer.Do(c.client, req)
-	retCode := 0
-	if resp != nil {
-		retCode = resp.StatusCode
-	}
-
-	// log all client failures and non-successful HT
-	logData := map[string]interface{}{
-		"backend":     "breakdown",
-		"method":      req.Method,
-		"uri":         req.URL,
-		"status_code": retCode,
-	}
-	if err == nil && retCode > 399 {
-		logData["message"] = resp.Status
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-	}
-	if err != nil {
-		logData["message"] = err.Error()
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	switch resp.StatusCode {
-
-	case 200:
-
-		var output models.Thing
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-
-		return &output, nil
-
-	case 400:
-
-		var output models.BadRequest
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	case 404:
-
-		var output models.NotFound
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	case 500:
-
-		var output models.InternalError
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	default:
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
-	}
-}
-
-// CreateOrUpdateThing makes a PUT request to /v2/things/{id}
-//
-// 200: *models.Thing
-// 400: *models.BadRequest
-// 500: *models.InternalError
-// default: client side HTTP errors, for example: context.DeadlineExceeded.
-func (c *WagClient) CreateOrUpdateThing(ctx context.Context, i *models.CreateOrUpdateThingInput) (*models.Thing, error) {
-	headers := make(map[string]string)
-
-	var body []byte
-	path, err := i.Path()
-
-	if err != nil {
-		return nil, err
-	}
-
-	path = c.basePath + path
-
-	if i.Thing != nil {
-
-		var err error
-		body, err = json.Marshal(i.Thing)
-
-		if err != nil {
-			return nil, err
-		}
-
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "PUT", path, bytes.NewBuffer(body))
-
-	if err != nil {
-		return nil, err
-	}
-
-	return c.doCreateOrUpdateThingRequest(ctx, req, headers)
-}
-
-func (c *WagClient) doCreateOrUpdateThingRequest(ctx context.Context, req *http.Request, headers map[string]string) (*models.Thing, error) {
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Canonical-Resource", "createOrUpdateThing")
-	req.Header.Set(VersionHeader, Version)
-
-	for field, value := range headers {
-		req.Header.Set(field, value)
-	}
-
-	// Add the opname for doers like tracing
-	ctx = context.WithValue(ctx, opNameCtx{}, "createOrUpdateThing")
-	req = req.WithContext(ctx)
-	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
-	// until we've finished all the processing of the request object. Otherwise we'll cancel
-	// our own request before we've finished it.
-	if c.defaultTimeout != 0 {
-		ctx, cancel := context.WithTimeout(req.Context(), c.defaultTimeout)
-		defer cancel()
-		req = req.WithContext(ctx)
-	}
-
-	resp, err := c.requestDoer.Do(c.client, req)
-	retCode := 0
-	if resp != nil {
-		retCode = resp.StatusCode
-	}
-
-	// log all client failures and non-successful HT
-	logData := map[string]interface{}{
-		"backend":     "breakdown",
-		"method":      req.Method,
-		"uri":         req.URL,
-		"status_code": retCode,
-	}
-	if err == nil && retCode > 399 {
-		logData["message"] = resp.Status
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-	}
-	if err != nil {
-		logData["message"] = err.Error()
-		c.logger.Log(wcl.Error, "client-request-finished", logData)
-		return nil, err
-	}
-	defer resp.Body.Close()
-	switch resp.StatusCode {
-
-	case 200:
-
-		var output models.Thing
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-
-		return &output, nil
-
-	case 400:
-
-		var output models.BadRequest
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	case 500:
-
-		var output models.InternalError
-		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
-			return nil, err
-		}
-		return nil, &output
-
-	default:
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
 	}
 }
 

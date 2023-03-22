@@ -34,20 +34,3 @@ module.exports.Errors.InternalError = class extends Error {
   }
 };
 
-/**
- * NotFound
- * @extends Error
- * @memberof module:breakdown
- * @alias module:breakdown.Errors.NotFound
- * @property  code
- * @property {string} message
- */
-module.exports.Errors.NotFound = class extends Error {
-  constructor(body) {
-    super(body.message);
-    for (const k of Object.keys(body)) {
-      this[k] = body[k];
-    }
-  }
-};
-

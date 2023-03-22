@@ -350,109 +350,8 @@ class Breakdown {
   }
 
   /**
-   * @param {object} [options]
-   * @param {number} [options.timeout] - A request specific timeout
-   * @param {module:breakdown.RetryPolicies} [options.retryPolicy] - A request specific retryPolicy
-   * @param {function} [cb]
-   * @returns {Promise}
-   * @fulfill {Object[]}
-   * @reject {module:breakdown.Errors.BadRequest}
-   * @reject {module:breakdown.Errors.InternalError}
-   * @reject {Error}
-   */
-  getThings(options, cb) {
-    let callback = cb;
-    if (!cb && typeof options === "function") {
-      callback = options;
-    }
-    return applyCallback(this._hystrixCommand.execute(this._getThings, arguments), callback);
-  }
-
-  _getThings(options, cb) {
-    const params = {};
-
-    if (!cb && typeof options === "function") {
-      options = undefined;
-    }
-
-    return new Promise((resolve, reject) => {
-      if (!options) {
-        options = {};
-      }
-
-      const timeout = options.timeout || this.timeout;
-
-      const headers = {};
-      headers["Canonical-Resource"] = "getThings";
-      headers[versionHeader] = version;
-
-      const query = {};
-
-      const requestOptions = {
-        method: "GET",
-        uri: this.address + "/v2/things",
-        gzip: true,
-        json: true,
-        timeout,
-        headers,
-        qs: query,
-        useQuerystring: true,
-      };
-      if (this.keepalive) {
-        requestOptions.forever = true;
-      }
-
-
-      const retryPolicy = options.retryPolicy || this.retryPolicy || singleRetryPolicy;
-      const backoffs = retryPolicy.backoffs();
-      const logger = this.logger;
-
-      let retries = 0;
-      (function requestOnce() {
-        request(requestOptions, (err, response, body) => {
-          if (retries < backoffs.length && retryPolicy.retry(requestOptions, err, response, body)) {
-            const backoff = backoffs[retries];
-            retries += 1;
-            setTimeout(requestOnce, backoff);
-            return;
-          }
-          if (err) {
-            err._fromRequest = true;
-            responseLog(logger, requestOptions, response, err)
-            reject(err);
-            return;
-          }
-
-          switch (response.statusCode) {
-            case 200:
-              resolve(body);
-              break;
-
-            case 400:
-              var err = new Errors.BadRequest(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
-            case 500:
-              var err = new Errors.InternalError(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
-            default:
-              var err = new Error("Received unexpected statusCode " + response.statusCode);
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-          }
-        });
-      }());
-    });
-  }
-
-  /**
-   * @param {string} id
+   * upload or replace custom data for a given repo and commit SHA
+   * @param customData
    * @param {object} [options]
    * @param {number} [options.timeout] - A request specific timeout
    * @param {module:breakdown.RetryPolicies} [options.retryPolicy] - A request specific retryPolicy
@@ -460,21 +359,20 @@ class Breakdown {
    * @returns {Promise}
    * @fulfill {undefined}
    * @reject {module:breakdown.Errors.BadRequest}
-   * @reject {module:breakdown.Errors.NotFound}
    * @reject {module:breakdown.Errors.InternalError}
    * @reject {Error}
    */
-  deleteThing(id, options, cb) {
+  postCustom(customData, options, cb) {
     let callback = cb;
     if (!cb && typeof options === "function") {
       callback = options;
     }
-    return applyCallback(this._hystrixCommand.execute(this._deleteThing, arguments), callback);
+    return applyCallback(this._hystrixCommand.execute(this._postCustom, arguments), callback);
   }
 
-  _deleteThing(id, options, cb) {
+  _postCustom(customData, options, cb) {
     const params = {};
-    params["id"] = id;
+    params["customData"] = customData;
 
     if (!cb && typeof options === "function") {
       options = undefined;
@@ -488,18 +386,14 @@ class Breakdown {
       const timeout = options.timeout || this.timeout;
 
       const headers = {};
-      headers["Canonical-Resource"] = "deleteThing";
+      headers["Canonical-Resource"] = "postCustom";
       headers[versionHeader] = version;
-      if (!params.id) {
-        reject(new Error("id must be non-empty because it's a path parameter"));
-        return;
-      }
 
       const query = {};
 
       const requestOptions = {
-        method: "DELETE",
-        uri: this.address + "/v2/things/" + params.id + "",
+        method: "PUT",
+        uri: this.address + "/v1/custom",
         gzip: true,
         json: true,
         timeout,
@@ -510,6 +404,8 @@ class Breakdown {
       if (this.keepalive) {
         requestOptions.forever = true;
       }
+
+      requestOptions.body = params.customData;
 
 
       const retryPolicy = options.retryPolicy || this.retryPolicy || singleRetryPolicy;
@@ -543,12 +439,6 @@ class Breakdown {
               reject(err);
               return;
 
-            case 404:
-              var err = new Errors.NotFound(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
             case 500:
               var err = new Errors.InternalError(body || {});
               responseLog(logger, requestOptions, response, err);
@@ -567,29 +457,29 @@ class Breakdown {
   }
 
   /**
-   * @param {string} id
+   * upload a package-type file, generated by breakdown-cli
+   * @param packageFiles
    * @param {object} [options]
    * @param {number} [options.timeout] - A request specific timeout
    * @param {module:breakdown.RetryPolicies} [options.retryPolicy] - A request specific retryPolicy
    * @param {function} [cb]
    * @returns {Promise}
-   * @fulfill {Object}
+   * @fulfill {undefined}
    * @reject {module:breakdown.Errors.BadRequest}
-   * @reject {module:breakdown.Errors.NotFound}
    * @reject {module:breakdown.Errors.InternalError}
    * @reject {Error}
    */
-  getThing(id, options, cb) {
+  postUpload(packageFiles, options, cb) {
     let callback = cb;
     if (!cb && typeof options === "function") {
       callback = options;
     }
-    return applyCallback(this._hystrixCommand.execute(this._getThing, arguments), callback);
+    return applyCallback(this._hystrixCommand.execute(this._postUpload, arguments), callback);
   }
 
-  _getThing(id, options, cb) {
+  _postUpload(packageFiles, options, cb) {
     const params = {};
-    params["id"] = id;
+    params["packageFiles"] = packageFiles;
 
     if (!cb && typeof options === "function") {
       options = undefined;
@@ -603,18 +493,14 @@ class Breakdown {
       const timeout = options.timeout || this.timeout;
 
       const headers = {};
-      headers["Canonical-Resource"] = "getThing";
+      headers["Canonical-Resource"] = "postUpload";
       headers[versionHeader] = version;
-      if (!params.id) {
-        reject(new Error("id must be non-empty because it's a path parameter"));
-        return;
-      }
 
       const query = {};
 
       const requestOptions = {
-        method: "GET",
-        uri: this.address + "/v2/things/" + params.id + "",
+        method: "POST",
+        uri: this.address + "/v1/upload",
         gzip: true,
         json: true,
         timeout,
@@ -625,6 +511,8 @@ class Breakdown {
       if (this.keepalive) {
         requestOptions.forever = true;
       }
+
+      requestOptions.body = params.packageFiles;
 
 
       const retryPolicy = options.retryPolicy || this.retryPolicy || singleRetryPolicy;
@@ -649,122 +537,7 @@ class Breakdown {
 
           switch (response.statusCode) {
             case 200:
-              resolve(body);
-              break;
-
-            case 400:
-              var err = new Errors.BadRequest(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
-            case 404:
-              var err = new Errors.NotFound(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
-            case 500:
-              var err = new Errors.InternalError(body || {});
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-
-            default:
-              var err = new Error("Received unexpected statusCode " + response.statusCode);
-              responseLog(logger, requestOptions, response, err);
-              reject(err);
-              return;
-          }
-        });
-      }());
-    });
-  }
-
-  /**
-   * @param {Object} params
-   * @param [params.thing]
-   * @param {string} params.id
-   * @param {object} [options]
-   * @param {number} [options.timeout] - A request specific timeout
-   * @param {module:breakdown.RetryPolicies} [options.retryPolicy] - A request specific retryPolicy
-   * @param {function} [cb]
-   * @returns {Promise}
-   * @fulfill {Object}
-   * @reject {module:breakdown.Errors.BadRequest}
-   * @reject {module:breakdown.Errors.InternalError}
-   * @reject {Error}
-   */
-  createOrUpdateThing(params, options, cb) {
-    let callback = cb;
-    if (!cb && typeof options === "function") {
-      callback = options;
-    }
-    return applyCallback(this._hystrixCommand.execute(this._createOrUpdateThing, arguments), callback);
-  }
-
-  _createOrUpdateThing(params, options, cb) {
-    if (!cb && typeof options === "function") {
-      options = undefined;
-    }
-
-    return new Promise((resolve, reject) => {
-      if (!options) {
-        options = {};
-      }
-
-      const timeout = options.timeout || this.timeout;
-
-      const headers = {};
-      headers["Canonical-Resource"] = "createOrUpdateThing";
-      headers[versionHeader] = version;
-      if (!params.id) {
-        reject(new Error("id must be non-empty because it's a path parameter"));
-        return;
-      }
-
-      const query = {};
-
-      const requestOptions = {
-        method: "PUT",
-        uri: this.address + "/v2/things/" + params.id + "",
-        gzip: true,
-        json: true,
-        timeout,
-        headers,
-        qs: query,
-        useQuerystring: true,
-      };
-      if (this.keepalive) {
-        requestOptions.forever = true;
-      }
-
-      requestOptions.body = params.thing;
-
-
-      const retryPolicy = options.retryPolicy || this.retryPolicy || singleRetryPolicy;
-      const backoffs = retryPolicy.backoffs();
-      const logger = this.logger;
-
-      let retries = 0;
-      (function requestOnce() {
-        request(requestOptions, (err, response, body) => {
-          if (retries < backoffs.length && retryPolicy.retry(requestOptions, err, response, body)) {
-            const backoff = backoffs[retries];
-            retries += 1;
-            setTimeout(requestOnce, backoff);
-            return;
-          }
-          if (err) {
-            err._fromRequest = true;
-            responseLog(logger, requestOptions, response, err)
-            reject(err);
-            return;
-          }
-
-          switch (response.statusCode) {
-            case 200:
-              resolve(body);
+              resolve();
               break;
 
             case 400:

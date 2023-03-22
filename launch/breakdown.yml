@@ -56,7 +56,7 @@ alarms:
   extraParameters:
     errorMinimum: 5
 pod_config:
-  group: us-west-1
+  group: us-west-2
 deploy_config:
   canaryInProd: true
   autoDeployEnvs:

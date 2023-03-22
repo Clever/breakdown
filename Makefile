@@ -10,7 +10,7 @@ PKGS := $(shell go list ./... | grep -v /gen-go | grep -v /tools)
 
 WAG_VERSION := latest
 
-$(eval $(call golang-version-check,1.16))
+$(eval $(call golang-version-check,1.18))
 
 .PHONY: all test build run $(PKGS) generate go-generate install_deps
 
@@ -48,7 +48,7 @@ run: bin/reflex gen-go vendor launch.go bin/kvconfig.yml
 # install_deps is an alias for vendor.
 # vendor needs to be redone whenever go.mod or go.sum change.
 # vendor must run before building bin apps
-install_deps: vendor bin/reflex bin/mockgen bin/launch-gen bin/woke
+install_deps: vendor bin/reflex bin/mockgen bin/launch-gen bin/woke bin/sqlc
 vendor: go.mod go.sum
 	go mod vendor
 bin/mockgen:
@@ -59,6 +59,8 @@ bin/reflex:
 	go build -o bin/reflex github.com/cespare/reflex
 bin/woke:
 	go build -o bin/woke github.com/get-woke/woke
+bin/sqlc:
+	go build -mod=readonly -o bin/sqlc github.com/kyleconroy/sqlc/cmd/sqlc
 
 # go.sum doesn't always exist (i.e. when repo is first created),
 go.sum:
