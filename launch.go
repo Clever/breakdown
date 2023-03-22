@@ -19,7 +19,12 @@ type LaunchConfig struct {
 type Dependencies struct{}
 
 // Environment has environment variables and their values
-type Environment struct{}
+type Environment struct {
+	PostgresDb       string
+	PostgresHost     string
+	PostgresPassword string
+	PostgresUsername string
+}
 
 // AwsResources contains string IDs that will help for accessing various AWS resources
 type AwsResources struct{}
@@ -29,7 +34,12 @@ func InitLaunchConfig(exp *trace.SpanExporter) LaunchConfig {
 	return LaunchConfig{
 		AwsResources: AwsResources{},
 		Deps:         Dependencies{},
-		Env:          Environment{},
+		Env: Environment{
+			PostgresDb:       requireEnvVar("POSTGRES_DB"),
+			PostgresHost:     requireEnvVar("POSTGRES_HOST"),
+			PostgresPassword: requireEnvVar("POSTGRES_PASSWORD"),
+			PostgresUsername: requireEnvVar("POSTGRES_USERNAME"),
+		},
 	}
 }
 

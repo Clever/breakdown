@@ -1,8 +1,0 @@
-application: breakdown
-type: aurora
-team: eng-infra
-dev:
-  region: us-west-2
-  longQueryTime: 2.0
-prod:
-  region: us-west-2

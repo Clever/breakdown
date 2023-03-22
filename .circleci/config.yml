@@ -4,7 +4,11 @@ executors:
   common-executor:
     working_directory: ~/go/src/github.com/Clever/breakdown
     docker:
-      - image: cimg/go:1.18-node
+      - image: cimg/go:1.19-node
+      - image: cimg/postgres:14.6
+        environment:
+          POSTGRES_DB: breakdown_test
+          POSTGRES_PASSWORD: supersecret
     environment:
       CIRCLE_ARTIFACTS: /tmp/circleci-artifacts
       CIRCLE_TEST_REPORTS: /tmp/circleci-test-results
@@ -25,6 +29,7 @@ jobs:
       - checkout
       - run: make install_deps
       - run: make build
+      - run: make release
       - persist_to_workspace:
           root: ~/go/src/github.com/Clever
           paths: "."
@@ -39,6 +44,7 @@ jobs:
       - run: ../ci-scripts/circleci/docker-publish $DOCKER_USER $DOCKER_PASS "$DOCKER_EMAIL" $DOCKER_ORG
       - run: ../ci-scripts/circleci/catapult-publish $CATAPULT_URL $CATAPULT_USER $CATAPULT_PASS $APP_NAME
       - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then ../ci-scripts/circleci/npm-publish $NPM_TOKEN gen-js/; fi;
+      - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then ./scripts/cli-release $GH_RELEASE_TOKEN; fi;
       - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then cat ./swagger.yml | grep "^  version:" | cut -d":" -f2 | tr -d " " > ./VERSION; fi;
       - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then ../ci-scripts/circleci/github-release $GH_RELEASE_TOKEN; fi;
       - run: if [ "${CIRCLE_BRANCH}" == "master" ]; then ../ci-scripts/circleci/submodule-github-release $GH_RELEASE_TOKEN gen-go/client; fi;
@@ -57,6 +63,12 @@ jobs:
       - run:
           name: Add github.com to known hosts
           command: mkdir -p ~/.ssh && touch ~/.ssh/known_hosts && echo 'github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==' >> ~/.ssh/known_hosts
+      - run:
+          name: Install goose
+          command: go install github.com/pressly/goose/v3/cmd/goose@v3.10.0
+      - run:
+          name: Wait for DB
+          command: dockerize -wait tcp://127.0.0.1:5432 -timeout 10s
       - run: make test
 
   deploy:

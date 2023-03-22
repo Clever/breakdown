@@ -1,4 +1,8 @@
-env: []
+env:
+- POSTGRES_DB
+- POSTGRES_HOST
+- POSTGRES_PASSWORD
+- POSTGRES_USERNAME
 resources:
   cpu: 0.25
   max_mem: 0.5

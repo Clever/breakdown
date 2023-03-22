@@ -19,3 +19,5 @@ package-lock.json
 
 # ignore coverage results
 coverage.txt
+
+release/

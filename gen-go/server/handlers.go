@@ -209,6 +209,89 @@ func newPostCustomInput(r *http.Request) (*models.CustomData, error) {
 	return nil, nil
 }
 
+// statusCodeForPostDeploy returns the status code corresponding to the returned
+// object. It returns -1 if the type doesn't correspond to anything.
+func statusCodeForPostDeploy(obj interface{}) int {
+
+	switch obj.(type) {
+
+	case *models.BadRequest:
+		return 400
+
+	case *models.InternalError:
+		return 500
+
+	case models.BadRequest:
+		return 400
+
+	case models.InternalError:
+		return 500
+
+	default:
+		return -1
+	}
+}
+
+func (h handler) PostDeployHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+
+	input, err := newPostDeployInput(r)
+	if err != nil {
+		logger.FromContext(ctx).AddContext("error", err.Error())
+		http.Error(w, jsonMarshalNoError(models.BadRequest{Message: err.Error()}), http.StatusBadRequest)
+		return
+	}
+
+	if input != nil {
+		err = input.Validate(nil)
+	}
+
+	if err != nil {
+		logger.FromContext(ctx).AddContext("error", err.Error())
+		http.Error(w, jsonMarshalNoError(models.BadRequest{Message: err.Error()}), http.StatusBadRequest)
+		return
+	}
+
+	err = h.PostDeploy(ctx, input)
+
+	if err != nil {
+		logger.FromContext(ctx).AddContext("error", err.Error())
+		if btErr, ok := err.(*errors.Error); ok {
+			logger.FromContext(ctx).AddContext("stacktrace", string(btErr.Stack()))
+		} else if xerr, ok := err.(xerrors.Formatter); ok {
+			logger.FromContext(ctx).AddContext("frames", fmt.Sprintf("%+v", xerr))
+		}
+		statusCode := statusCodeForPostDeploy(err)
+		if statusCode == -1 {
+			err = models.InternalError{Message: err.Error()}
+			statusCode = 500
+		}
+		http.Error(w, jsonMarshalNoError(err), statusCode)
+		return
+	}
+
+	w.WriteHeader(200)
+	w.Write([]byte(""))
+
+}
+
+// newPostDeployInput takes in an http.Request an returns the input struct.
+func newPostDeployInput(r *http.Request) (*models.Deploys, error) {
+	var err error
+	_ = err
+
+	data, err := ioutil.ReadAll(r.Body)
+
+	if len(data) > 0 {
+		var input models.Deploys
+		if err := json.NewDecoder(bytes.NewReader(data)).Decode(&input); err != nil {
+			return nil, err
+		}
+		return &input, nil
+	}
+
+	return nil, nil
+}
+
 // statusCodeForPostUpload returns the status code corresponding to the returned
 // object. It returns -1 if the type doesn't correspond to anything.
 func statusCodeForPostUpload(obj interface{}) int {
@@ -275,14 +358,14 @@ func (h handler) PostUploadHandler(ctx context.Context, w http.ResponseWriter, r
 }
 
 // newPostUploadInput takes in an http.Request an returns the input struct.
-func newPostUploadInput(r *http.Request) (*models.RepoPackageFiles, error) {
+func newPostUploadInput(r *http.Request) (*models.RepoCommit, error) {
 	var err error
 	_ = err
 
 	data, err := ioutil.ReadAll(r.Body)
 
 	if len(data) > 0 {
-		var input models.RepoPackageFiles
+		var input models.RepoCommit
 		if err := json.NewDecoder(bytes.NewReader(data)).Decode(&input); err != nil {
 			return nil, err
 		}

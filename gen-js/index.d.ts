@@ -60,7 +60,9 @@ declare class Breakdown {
   
   postCustom(customData?: models.CustomData, options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
-  postUpload(packageFiles?: models.RepoPackageFiles, options?: RequestOptions, cb?: Callback<void>): Promise<void>
+  postDeploy(deploys?: models.Deploys, options?: RequestOptions, cb?: Callback<void>): Promise<void>
+  
+  postUpload(repoCommit?: models.RepoCommit, options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
 }
 
@@ -104,6 +106,16 @@ declare namespace Breakdown {
   repo_name: string;
 };
     
+    type Deploy = {
+  application: string;
+  commit_sha: string;
+  environment: string;
+  run_type: string;
+  version: string;
+};
+    
+    type Deploys = Deploy[];
+    
     type ErrorCode = ("InvalidID");
     
     type JSONObject = {
@@ -112,12 +124,19 @@ declare namespace Breakdown {
 };
 };
     
+    type RepoCommit = {
+  commit_sha: string;
+  package_files?: RepoPackageFiles;
+  repo_name: string;
+};
+    
     type RepoPackageFile = {
   error?: string;
   go_version?: string;
-  name: string;
-  packages: RepoPackages;
+  name?: string;
+  packages?: { [key: string]: RepoPackages };
   path: string;
+  type: ("gomod" | "npm");
 };
     
     type RepoPackageFiles = RepoPackageFile[];

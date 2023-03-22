@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+# Migrate a DB
+#
+# Usage:
+#
+#     ./db/migrate
+#     ./db/migrate clever-dev
+#     ./db/migrate production
+#
+
+environment=$1
+
+function tunnel_into_aurora() {
+  local host=$1
+  local password=$2
+  local user=$3
+
+  # Open tunnel
+  ssh \
+    -M -S aurora-tunnel \
+    -fnNT \
+    -L 9000:$host:5432 \
+    bastion1.ops.clever.com
+
+  # Connect to Aurora console
+  goose \
+    -dir \
+    ./db/migrations/ \
+    postgres "host=127.0.0.1 port=9000 user=$user password=$password dbname=breakdown" up
+
+  # Close tunnel
+  ssh -S aurora-tunnel -O exit bastion1.ops.clever.com
+}
+
+function get_config() {
+  local environment=$1
+  local key=$2
+
+  ark info --config --env $environment breakdown | \
+    grep $key | \
+    head -1 | \
+    awk '{ print $2 }'
+}
+
+case $environment in
+  "clever-dev")
+    # Connect to the `clever-dev` Aurora database
+    # host=$(get_config clever-dev POSTGRES_HOST)
+    host=TODO
+    password=$(ark secrets read development.breakdown aurora-password)
+    user=TODO
+    tunnel_into_aurora $host $password $user
+    ;;
+
+  "production")
+    # Connect to the `production` Aurora database
+    # host=$(get_config production POSTGRES_HOST)
+    host=TODO
+    password=$(ark secrets read production.breakdown aurora-password)
+    user=TODO
+    tunnel_into_aurora $host $password $user
+    ;;
+
+  *)
+    # Connect to the local development database
+    host=127.0.0.1
+    password=supersecret
+    user=postgres
+    goose \
+    -dir \
+    ./db/migrations/ \
+    postgres "host=$host user=$user password=$password dbname=breakdown" up
+    ;;
+esac

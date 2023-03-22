@@ -7,14 +7,26 @@ import (
 	"os"
 	"time"
 
+	"github.com/Clever/breakdown/db"
 	"github.com/Clever/breakdown/gen-go/server"
 	"github.com/Clever/breakdown/gen-go/servertracing"
 	"github.com/Clever/kayvee-go/v7/logger"
 	"github.com/Clever/kayvee-go/v7/middleware"
 	"github.com/Clever/wag/swagger"
+	"github.com/jackc/pgx/v4"
 	trace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
+
+func newDBFromLaunch(config LaunchConfig) (*pgx.Conn, error) {
+	return db.FromConfig(db.Config{
+		User:         config.Env.PostgresUsername,
+		Password:     config.Env.PostgresPassword,
+		Host:         config.Env.PostgresHost,
+		DatabaseName: config.Env.PostgresDb,
+		Port:         "5432",
+	})
+}
 
 func main() {
 	addr := flag.String("addr", ":8080", "Address to listen at")
@@ -37,8 +49,17 @@ func main() {
 
 	middleware.EnableRollups(context.Background(), logger.NewConcreteLogger("breakdown"), 20*time.Second)
 
+	launchConfig := InitLaunchConfig(&exporter)
+
+	db, err := newDBFromLaunch(launchConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	myController := MyController{
-		launchConfig: InitLaunchConfig(&exporter),
+		launchConfig: launchConfig,
+		db:           db,
+		l:            logger.NewConcreteLogger("breakdown"),
 	}
 	s := server.New(myController, *addr)
 
