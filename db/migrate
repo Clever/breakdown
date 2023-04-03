@@ -47,18 +47,18 @@ case $environment in
   "clever-dev")
     # Connect to the `clever-dev` Aurora database
     # host=$(get_config clever-dev POSTGRES_HOST)
-    host=TODO
+    host=$(get_config clever-dev POSTGRES_HOST)
     password=$(ark secrets read development.breakdown aurora-password)
-    user=TODO
+    user=$(get_config clever-dev POSTGRES_USER)
     tunnel_into_aurora $host $password $user
     ;;
 
   "production")
     # Connect to the `production` Aurora database
     # host=$(get_config production POSTGRES_HOST)
-    host=TODO
+    host=$(get_config production POSTGRES_HOST)
     password=$(ark secrets read production.breakdown aurora-password)
-    user=TODO
+    user=$(get_config production POSTGRES_USER)
     tunnel_into_aurora $host $password $user
     ;;
 
