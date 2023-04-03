@@ -94,6 +94,8 @@ func runQueryTest[K any](t *testing.T, tests []queryTest[K]) {
 	defer db.Close(ctx)
 
 	for _, tt := range tests {
+		// will delete all data from repo, repo_commit, and package_file
+		db.Exec(ctx, `TRUNCATE repo CASCADE`)
 		t.Run(tt.name, func(t *testing.T) {
 			tx, err := db.Begin(ctx)
 			if err != nil {
