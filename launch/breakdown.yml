@@ -68,4 +68,6 @@ deploy_config:
   - clever-dev
 mesh_config:
   dev:
-    state: hybrid
+    state: mesh_only
+  crossRegionRoute: non-sso
+  setupInternalRoute: true
