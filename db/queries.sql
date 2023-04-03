@@ -91,3 +91,16 @@ INSERT INTO deployment (
 
 -- name: GetDeploys :many
 SELECT * FROM deployment ORDER BY commit_sha;
+
+-- name: GetCommit :one
+SELECT *
+FROM repo_commit
+WHERE repo_id = (SELECT id FROM repo WHERE name = $1)
+    AND commit_sha = $2
+LIMIT 1;
+
+-- name: GetCommits :many
+SELECT r.name, rc.commit_sha, rc.meta
+FROM repo_commit rc
+LEFT JOIN repo r ON r.id = rc.repo_id
+ORDER BY 1, 2;

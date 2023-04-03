@@ -19,6 +19,15 @@ type Client interface {
 	// default: client side HTTP errors, for example: context.DeadlineExceeded.
 	HealthCheck(ctx context.Context) error
 
+	// GetCommit makes a GET request to /v1/commit
+	// get repo commit information
+	// 200: *models.CommitInformation
+	// 400: *models.BadRequest
+	// 404: *models.NotFound
+	// 500: *models.InternalError
+	// default: client side HTTP errors, for example: context.DeadlineExceeded.
+	GetCommit(ctx context.Context, i *models.GetCommitInformation) (*models.CommitInformation, error)
+
 	// PostCustom makes a PUT request to /v1/custom
 	// upload or replace custom data for a given repo and commit SHA
 	// 200: nil

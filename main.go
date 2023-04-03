@@ -51,15 +51,16 @@ func main() {
 
 	launchConfig := InitLaunchConfig(&exporter)
 
-	db, err := newDBFromLaunch(launchConfig)
+	pgConn, err := newDBFromLaunch(launchConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	myController := MyController{
 		launchConfig: launchConfig,
-		db:           db,
+		db:           pgConn,
 		l:            logger.NewConcreteLogger("breakdown"),
+		queries:      db.New(pgConn),
 	}
 	s := server.New(myController, *addr)
 

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/jackc/pgtype"
@@ -84,6 +85,65 @@ func (q *Queries) CreateRepoCommit(ctx context.Context, arg CreateRepoCommitPara
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getCommit = `-- name: GetCommit :one
+SELECT id, repo_id, commit_sha, commit_date, meta
+FROM repo_commit
+WHERE repo_id = (SELECT id FROM repo WHERE name = $1)
+    AND commit_sha = $2
+LIMIT 1
+`
+
+type GetCommitParams struct {
+	Name      string
+	CommitSha string
+}
+
+func (q *Queries) GetCommit(ctx context.Context, arg GetCommitParams) (RepoCommit, error) {
+	row := q.db.QueryRow(ctx, getCommit, arg.Name, arg.CommitSha)
+	var i RepoCommit
+	err := row.Scan(
+		&i.ID,
+		&i.RepoID,
+		&i.CommitSha,
+		&i.CommitDate,
+		&i.Meta,
+	)
+	return i, err
+}
+
+const getCommits = `-- name: GetCommits :many
+SELECT r.name, rc.commit_sha, rc.meta
+FROM repo_commit rc
+LEFT JOIN repo r ON r.id = rc.repo_id
+ORDER BY 1, 2
+`
+
+type GetCommitsRow struct {
+	Name      sql.NullString
+	CommitSha string
+	Meta      pgtype.JSONB
+}
+
+func (q *Queries) GetCommits(ctx context.Context) ([]GetCommitsRow, error) {
+	rows, err := q.db.Query(ctx, getCommits)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCommitsRow
+	for rows.Next() {
+		var i GetCommitsRow
+		if err := rows.Scan(&i.Name, &i.CommitSha, &i.Meta); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getDependencyId = `-- name: GetDependencyId :one

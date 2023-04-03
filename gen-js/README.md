@@ -10,6 +10,7 @@ breakdown client library.
         * _instance_
             * [.close()](#module_breakdown--Breakdown+close)
             * [.healthCheck([options], [cb])](#module_breakdown--Breakdown+healthCheck) ⇒ <code>Promise</code>
+            * [.getCommit(commitInfo, [options], [cb])](#module_breakdown--Breakdown+getCommit) ⇒ <code>Promise</code>
             * [.postCustom(customData, [options], [cb])](#module_breakdown--Breakdown+postCustom) ⇒ <code>Promise</code>
             * [.postDeploy(deploys, [options], [cb])](#module_breakdown--Breakdown+postDeploy) ⇒ <code>Promise</code>
             * [.postUpload(repoCommit, [options], [cb])](#module_breakdown--Breakdown+postUpload) ⇒ <code>Promise</code>
@@ -21,6 +22,7 @@ breakdown client library.
             * [.Errors](#module_breakdown--Breakdown.Errors)
                 * [.BadRequest](#module_breakdown--Breakdown.Errors.BadRequest) ⇐ <code>Error</code>
                 * [.InternalError](#module_breakdown--Breakdown.Errors.InternalError) ⇐ <code>Error</code>
+                * [.NotFound](#module_breakdown--Breakdown.Errors.NotFound) ⇐ <code>Error</code>
             * [.DefaultCircuitOptions](#module_breakdown--Breakdown.DefaultCircuitOptions)
 
 <a name="exp_module_breakdown--Breakdown"></a>
@@ -70,6 +72,26 @@ Checks if the service is healthy
 
 | Param | Type | Description |
 | --- | --- | --- |
+| [options] | <code>object</code> |  |
+| [options.timeout] | <code>number</code> | A request specific timeout |
+| [options.retryPolicy] | [<code>RetryPolicies</code>](#module_breakdown--Breakdown.RetryPolicies) | A request specific retryPolicy |
+| [cb] | <code>function</code> |  |
+
+<a name="module_breakdown--Breakdown+getCommit"></a>
+
+#### breakdown.getCommit(commitInfo, [options], [cb]) ⇒ <code>Promise</code>
+get repo commit information
+
+**Kind**: instance method of [<code>Breakdown</code>](#exp_module_breakdown--Breakdown)  
+**Fulfill**: <code>Object</code>  
+**Reject**: [<code>BadRequest</code>](#module_breakdown--Breakdown.Errors.BadRequest)  
+**Reject**: [<code>NotFound</code>](#module_breakdown--Breakdown.Errors.NotFound)  
+**Reject**: [<code>InternalError</code>](#module_breakdown--Breakdown.Errors.InternalError)  
+**Reject**: <code>Error</code>  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| commitInfo |  |  |
 | [options] | <code>object</code> |  |
 | [options.timeout] | <code>number</code> | A request specific timeout |
 | [options.retryPolicy] | [<code>RetryPolicies</code>](#module_breakdown--Breakdown.RetryPolicies) | A request specific retryPolicy |
@@ -172,6 +194,7 @@ Errors returned by methods.
 * [.Errors](#module_breakdown--Breakdown.Errors)
     * [.BadRequest](#module_breakdown--Breakdown.Errors.BadRequest) ⇐ <code>Error</code>
     * [.InternalError](#module_breakdown--Breakdown.Errors.InternalError) ⇐ <code>Error</code>
+    * [.NotFound](#module_breakdown--Breakdown.Errors.NotFound) ⇐ <code>Error</code>
 
 <a name="module_breakdown--Breakdown.Errors.BadRequest"></a>
 
@@ -191,6 +214,20 @@ BadRequest
 
 ##### Errors.InternalError ⇐ <code>Error</code>
 InternalError
+
+**Kind**: static class of [<code>Errors</code>](#module_breakdown--Breakdown.Errors)  
+**Extends**: <code>Error</code>  
+**Properties**
+
+| Name | Type |
+| --- | --- |
+| code |  | 
+| message | <code>string</code> | 
+
+<a name="module_breakdown--Breakdown.Errors.NotFound"></a>
+
+##### Errors.NotFound ⇐ <code>Error</code>
+NotFound
 
 **Kind**: static class of [<code>Errors</code>](#module_breakdown--Breakdown.Errors)  
 **Extends**: <code>Error</code>  

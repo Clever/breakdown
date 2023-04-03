@@ -350,6 +350,120 @@ class Breakdown {
   }
 
   /**
+   * get repo commit information
+   * @param commitInfo
+   * @param {object} [options]
+   * @param {number} [options.timeout] - A request specific timeout
+   * @param {module:breakdown.RetryPolicies} [options.retryPolicy] - A request specific retryPolicy
+   * @param {function} [cb]
+   * @returns {Promise}
+   * @fulfill {Object}
+   * @reject {module:breakdown.Errors.BadRequest}
+   * @reject {module:breakdown.Errors.NotFound}
+   * @reject {module:breakdown.Errors.InternalError}
+   * @reject {Error}
+   */
+  getCommit(commitInfo, options, cb) {
+    let callback = cb;
+    if (!cb && typeof options === "function") {
+      callback = options;
+    }
+    return applyCallback(this._hystrixCommand.execute(this._getCommit, arguments), callback);
+  }
+
+  _getCommit(commitInfo, options, cb) {
+    const params = {};
+    params["commitInfo"] = commitInfo;
+
+    if (!cb && typeof options === "function") {
+      options = undefined;
+    }
+
+    return new Promise((resolve, reject) => {
+      if (!options) {
+        options = {};
+      }
+
+      const timeout = options.timeout || this.timeout;
+
+      const headers = {};
+      headers["Canonical-Resource"] = "getCommit";
+      headers[versionHeader] = version;
+
+      const query = {};
+
+      const requestOptions = {
+        method: "GET",
+        uri: this.address + "/v1/commit",
+        gzip: true,
+        json: true,
+        timeout,
+        headers,
+        qs: query,
+        useQuerystring: true,
+      };
+      if (this.keepalive) {
+        requestOptions.forever = true;
+      }
+
+      requestOptions.body = params.commitInfo;
+
+
+      const retryPolicy = options.retryPolicy || this.retryPolicy || singleRetryPolicy;
+      const backoffs = retryPolicy.backoffs();
+      const logger = this.logger;
+
+      let retries = 0;
+      (function requestOnce() {
+        request(requestOptions, (err, response, body) => {
+          if (retries < backoffs.length && retryPolicy.retry(requestOptions, err, response, body)) {
+            const backoff = backoffs[retries];
+            retries += 1;
+            setTimeout(requestOnce, backoff);
+            return;
+          }
+          if (err) {
+            err._fromRequest = true;
+            responseLog(logger, requestOptions, response, err)
+            reject(err);
+            return;
+          }
+
+          switch (response.statusCode) {
+            case 200:
+              resolve(body);
+              break;
+
+            case 400:
+              var err = new Errors.BadRequest(body || {});
+              responseLog(logger, requestOptions, response, err);
+              reject(err);
+              return;
+
+            case 404:
+              var err = new Errors.NotFound(body || {});
+              responseLog(logger, requestOptions, response, err);
+              reject(err);
+              return;
+
+            case 500:
+              var err = new Errors.InternalError(body || {});
+              responseLog(logger, requestOptions, response, err);
+              reject(err);
+              return;
+
+            default:
+              var err = new Error("Received unexpected statusCode " + response.statusCode);
+              responseLog(logger, requestOptions, response, err);
+              reject(err);
+              return;
+          }
+        });
+      }());
+    });
+  }
+
+  /**
    * upload or replace custom data for a given repo and commit SHA
    * @param customData
    * @param {object} [options]

@@ -259,6 +259,124 @@ func (c *WagClient) doHealthCheckRequest(ctx context.Context, req *http.Request,
 	}
 }
 
+// GetCommit makes a GET request to /v1/commit
+// get repo commit information
+// 200: *models.CommitInformation
+// 400: *models.BadRequest
+// 404: *models.NotFound
+// 500: *models.InternalError
+// default: client side HTTP errors, for example: context.DeadlineExceeded.
+func (c *WagClient) GetCommit(ctx context.Context, i *models.GetCommitInformation) (*models.CommitInformation, error) {
+	headers := make(map[string]string)
+
+	var body []byte
+	path := c.basePath + "/v1/commit"
+
+	if i != nil {
+
+		var err error
+		body, err = json.Marshal(i)
+
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", path, bytes.NewBuffer(body))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return c.doGetCommitRequest(ctx, req, headers)
+}
+
+func (c *WagClient) doGetCommitRequest(ctx context.Context, req *http.Request, headers map[string]string) (*models.CommitInformation, error) {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Canonical-Resource", "getCommit")
+	req.Header.Set(VersionHeader, Version)
+
+	for field, value := range headers {
+		req.Header.Set(field, value)
+	}
+
+	// Add the opname for doers like tracing
+	ctx = context.WithValue(ctx, opNameCtx{}, "getCommit")
+	req = req.WithContext(ctx)
+	// Don't add the timeout in a "doer" because we don't want to call "defer.cancel()"
+	// until we've finished all the processing of the request object. Otherwise we'll cancel
+	// our own request before we've finished it.
+	if c.defaultTimeout != 0 {
+		ctx, cancel := context.WithTimeout(req.Context(), c.defaultTimeout)
+		defer cancel()
+		req = req.WithContext(ctx)
+	}
+
+	resp, err := c.requestDoer.Do(c.client, req)
+	retCode := 0
+	if resp != nil {
+		retCode = resp.StatusCode
+	}
+
+	// log all client failures and non-successful HT
+	logData := map[string]interface{}{
+		"backend":     "breakdown",
+		"method":      req.Method,
+		"uri":         req.URL,
+		"status_code": retCode,
+	}
+	if err == nil && retCode > 399 {
+		logData["message"] = resp.Status
+		c.logger.Log(wcl.Error, "client-request-finished", logData)
+	}
+	if err != nil {
+		logData["message"] = err.Error()
+		c.logger.Log(wcl.Error, "client-request-finished", logData)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+
+	case 200:
+
+		var output models.CommitInformation
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			return nil, err
+		}
+
+		return &output, nil
+
+	case 400:
+
+		var output models.BadRequest
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			return nil, err
+		}
+		return nil, &output
+
+	case 404:
+
+		var output models.NotFound
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			return nil, err
+		}
+		return nil, &output
+
+	case 500:
+
+		var output models.InternalError
+		if err := json.NewDecoder(resp.Body).Decode(&output); err != nil {
+			return nil, err
+		}
+		return nil, &output
+
+	default:
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return nil, models.UnknownResponse{StatusCode: int64(resp.StatusCode), Body: string(bs)}
+	}
+}
+
 // PostCustom makes a PUT request to /v1/custom
 // upload or replace custom data for a given repo and commit SHA
 // 200: nil

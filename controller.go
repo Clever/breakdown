@@ -226,6 +226,38 @@ func (mc MyController) PostUpload(ctx context.Context, i *models.RepoCommit) err
 	return nil
 }
 
+// GetCommit handles GETs to /v1/commit
+func (mc MyController) GetCommit(ctx context.Context, i *models.GetCommitInformation) (*models.CommitInformation, error) {
+	qs := mc.queries
+
+	if len(*i.CommitSha) < 8 {
+		return nil, models.BadRequest{Message: "commit_sha not long enough"}
+	}
+
+	commit, err := qs.GetCommit(ctx, db.GetCommitParams{
+		Name:      *i.RepoName,
+		CommitSha: *i.CommitSha,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, models.NotFound{Message: "repo_commit not found"}
+		}
+		return nil, models.BadRequest{Message: err.Error()}
+	}
+
+	var meta models.JSONObject
+	if commit.Meta.Status&pgtype.Present > 0 {
+		commit.Meta.Scan(&meta)
+	}
+
+	return &models.CommitInformation{
+		CommitSha: commit.CommitSha,
+		RepoName:  *i.RepoName,
+		Meta:      meta,
+	}, nil
+
+}
+
 // PostCustom handles POSTs to /v1/custom
 func (mc MyController) PostCustom(ctx context.Context, i *models.CustomData) error {
 	return nil

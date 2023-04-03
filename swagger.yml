@@ -4,7 +4,7 @@ info:
   description: breaks down packages within repos
   # when changing the version here, make sure to run
   # `make generate` to generate clients and server
-  version: 0.2.0
+  version: 0.3.0
   x-npm-package: '@clever/breakdown'
 schemes:
   - http
@@ -49,6 +49,29 @@ paths:
           schema:
             $ref: "#/definitions/BadRequest"
 
+  /v1/commit:
+    get:
+      operationId: getCommit
+      description: get repo commit information
+      parameters:
+        - name: commit_info
+          in: body
+          schema:
+            $ref: '#/definitions/GetCommitInformation'
+      responses:
+        200:
+          description: "Commit Information"
+          schema:
+            $ref: '#/definitions/CommitInformation'
+        400:
+          description: Bad request.
+          schema:
+            $ref: "#/definitions/BadRequest"
+        404:
+          description: Not Found
+          schema:
+            $ref: '#/definitions/NotFound'
+
   /v1/deploy:
     post:
       operationId: postDeploy
@@ -90,6 +113,27 @@ definitions:
     additionalProperties:
       type: object
       additionalProperties: true
+
+  CommitInformation:
+    type: object
+    properties:
+      commit_sha:
+        type: string
+      repo_name:
+        type: string
+      meta:
+        $ref: '#/definitions/JSONObject'
+
+  GetCommitInformation:
+    type: object
+    required:
+      - commit_sha
+      - repo_name
+    properties:
+      commit_sha:
+        type: string
+      repo_name:
+        type: string
 
   Deploys:
     description: array of deploys

@@ -58,6 +58,8 @@ declare class Breakdown {
   
   healthCheck(options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
+  getCommit(commitInfo?: models.GetCommitInformation, options?: RequestOptions, cb?: Callback<models.CommitInformation>): Promise<models.CommitInformation>
+  
   postCustom(customData?: models.CustomData, options?: RequestOptions, cb?: Callback<void>): Promise<void>
   
   postDeploy(deploys?: models.Deploys, options?: RequestOptions, cb?: Callback<void>): Promise<void>
@@ -96,9 +98,22 @@ declare namespace Breakdown {
   constructor(body: ErrorBody);
 }
     
+    class NotFound {
+  code?: models.ErrorCode;
+  message?: string;
+
+  constructor(body: ErrorBody);
+}
+    
   }
 
   namespace Models {
+    
+    type CommitInformation = {
+  commit_sha?: string;
+  meta?: JSONObject;
+  repo_name?: string;
+};
     
     type CustomData = {
   commit_sha: string;
@@ -117,6 +132,11 @@ declare namespace Breakdown {
     type Deploys = Deploy[];
     
     type ErrorCode = ("InvalidID");
+    
+    type GetCommitInformation = {
+  commit_sha: string;
+  repo_name: string;
+};
     
     type JSONObject = {
   [key: string]: {
