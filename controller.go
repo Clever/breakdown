@@ -36,6 +36,9 @@ func (mc MyController) beginTX(ctx context.Context) (pgx.Tx, *db.Queries, error)
 // HealthCheck handles GET requests to /_health
 func (mc MyController) HealthCheck(ctx context.Context) error {
 	tx, qtx, err := mc.beginTX(ctx)
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback(ctx)
 	if err != nil {
 		return err
@@ -247,7 +250,10 @@ func (mc MyController) GetCommit(ctx context.Context, i *models.GetCommitInforma
 
 	var meta models.JSONObject
 	if commit.Meta.Status&pgtype.Present > 0 {
-		commit.Meta.Scan(&meta)
+		err = commit.Meta.AssignTo(&meta)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &models.CommitInformation{

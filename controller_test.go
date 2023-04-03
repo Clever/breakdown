@@ -149,10 +149,10 @@ func TestGetCommitInformation(t *testing.T) {
 		},
 		{
 			name:        "finds commit_sha",
-			expectError: true,
+			expectError: false,
 			input: func(c *pgx.Conn, mc MyController) error {
 				var meta pgtype.JSONB
-				meta.Set(`{"test": "some_test"}`)
+				meta.Set(`{"test":"some_test"}`)
 				_, err := c.Exec(context.Background(), `
 					WITH new_repo AS (
 						INSERT INTO repo (name) VALUES ($1)
@@ -164,8 +164,7 @@ func TestGetCommitInformation(t *testing.T) {
 					FROM new_repo nr
 				`, "breakdown", "11111111", meta)
 				if err != nil {
-					t.Errorf("insert error: %s", err)
-					return nil
+					return fmt.Errorf("insert error: %s", err)
 				}
 
 				commit, err := mc.GetCommit(context.Background(), &models.GetCommitInformation{
@@ -173,9 +172,10 @@ func TestGetCommitInformation(t *testing.T) {
 					RepoName:  swag.String("breakdown"),
 				})
 
+				fmt.Printf("%+v", commit.Meta)
+
 				if err != nil {
-					t.Errorf("error getting commit: %s", err)
-					return nil
+					return fmt.Errorf("error getting commit: %s", err)
 				}
 
 				metaExpected := make(map[string]interface{})
