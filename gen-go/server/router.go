@@ -149,6 +149,11 @@ func newRouter(c Controller) *mux.Router {
 		h.PostCustomHandler(r.Context(), w, r)
 	})
 
+	router.Methods("POST").Path("/v1/deploy").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logger.FromContext(r.Context()).AddContext("op", "postDeploy")
+		h.PostDeployHandler(r.Context(), w, r)
+	})
+
 	router.Methods("POST").Path("/v1/upload").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.FromContext(r.Context()).AddContext("op", "postUpload")
 		h.PostUploadHandler(r.Context(), w, r)

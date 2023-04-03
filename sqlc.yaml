@@ -1,0 +1,8 @@
+version: 1
+packages:
+  - name: db
+    path: db
+    engine: postgresql
+    queries: db/queries.sql
+    schema: db/migrations
+    sql_package: pgx/v4

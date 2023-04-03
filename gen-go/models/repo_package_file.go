@@ -6,6 +6,8 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
+	"encoding/json"
+
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
@@ -24,25 +26,24 @@ type RepoPackageFile struct {
 	GoVersion string `json:"go_version,omitempty"`
 
 	// Name of go module or npm package
-	// Required: true
-	Name *string `json:"name"`
+	Name string `json:"name,omitempty"`
 
 	// packages
-	// Required: true
-	Packages *RepoPackages `json:"packages"`
+	Packages map[string]RepoPackages `json:"packages,omitempty"`
 
 	// path to package file eg "go.mod"
 	// Required: true
 	Path *string `json:"path"`
+
+	// type of package-file, eg. gomod, npm
+	// Required: true
+	// Enum: [gomod npm]
+	Type *string `json:"type"`
 }
 
 // Validate validates this repo package file
 func (m *RepoPackageFile) Validate(formats strfmt.Registry) error {
 	var res []error
-
-	if err := m.validateName(formats); err != nil {
-		res = append(res, err)
-	}
 
 	if err := m.validatePackages(formats); err != nil {
 		res = append(res, err)
@@ -52,34 +53,33 @@ func (m *RepoPackageFile) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
+	if err := m.validateType(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
 	return nil
 }
 
-func (m *RepoPackageFile) validateName(formats strfmt.Registry) error {
-
-	if err := validate.Required("name", "body", m.Name); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (m *RepoPackageFile) validatePackages(formats strfmt.Registry) error {
 
-	if err := validate.Required("packages", "body", m.Packages); err != nil {
-		return err
+	if swag.IsZero(m.Packages) { // not required
+		return nil
 	}
 
-	if m.Packages != nil {
-		if err := m.Packages.Validate(formats); err != nil {
-			if ve, ok := err.(*errors.Validation); ok {
-				return ve.ValidateName("packages")
-			}
+	for k := range m.Packages {
+
+		if err := validate.Required("packages"+"."+k, "body", m.Packages[k]); err != nil {
 			return err
 		}
+		if val, ok := m.Packages[k]; ok {
+			if err := val.Validate(formats); err != nil {
+				return err
+			}
+		}
+
 	}
 
 	return nil
@@ -88,6 +88,49 @@ func (m *RepoPackageFile) validatePackages(formats strfmt.Registry) error {
 func (m *RepoPackageFile) validatePath(formats strfmt.Registry) error {
 
 	if err := validate.Required("path", "body", m.Path); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+var repoPackageFileTypeTypePropEnum []interface{}
+
+func init() {
+	var res []string
+	if err := json.Unmarshal([]byte(`["gomod","npm"]`), &res); err != nil {
+		panic(err)
+	}
+	for _, v := range res {
+		repoPackageFileTypeTypePropEnum = append(repoPackageFileTypeTypePropEnum, v)
+	}
+}
+
+const (
+
+	// RepoPackageFileTypeGomod captures enum value "gomod"
+	RepoPackageFileTypeGomod string = "gomod"
+
+	// RepoPackageFileTypeNpm captures enum value "npm"
+	RepoPackageFileTypeNpm string = "npm"
+)
+
+// prop value enum
+func (m *RepoPackageFile) validateTypeEnum(path, location string, value string) error {
+	if err := validate.Enum(path, location, value, repoPackageFileTypeTypePropEnum); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *RepoPackageFile) validateType(formats strfmt.Registry) error {
+
+	if err := validate.Required("type", "body", m.Type); err != nil {
+		return err
+	}
+
+	// value enum
+	if err := m.validateTypeEnum("type", "body", *m.Type); err != nil {
 		return err
 	}
 

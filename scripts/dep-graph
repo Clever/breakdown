@@ -1,0 +1,72 @@
+#!/bin/bash
+
+REPO="${1:-breakdown}"
+
+PGPASSWORD=supersecret psql -qX -h localhost -U postgres -d breakdown  <<EOF
+\t on
+\timing off
+\echo 'Digraph F{'
+\echo 'ranksep=1.0; rankdir=LR;'
+WITH RECURSIVE
+	latest_repo_commit AS (
+    SELECT
+      repo_commit.repo_id,
+      MAX(repo_commit.commit_date) as commit_date
+    FROM
+      repo_commit
+   	WHERE repo_commit.repo_id = (SELECT id FROM repo WHERE name = 'Clever/$REPO')
+    GROUP BY
+      1
+  ),
+  latest_commit AS (
+  	SELECT rc.*
+    FROM repo_commit rc
+    JOIN latest_repo_commit lrc ON
+    	(rc.repo_id, rc.commit_date) = (lrc.repo_id, lrc.commit_date)
+  ),
+  latest_package_files AS (
+  	SELECT lc.repo_id, lc.id as commit_id, pf.id, pf.path
+    FROM package_file pf
+    JOIN latest_commit lc ON pf.repo_commit_id = lc.id
+  ),
+  dir_deps AS (
+    SELECT lpf.path, dep.name || '@' || dep.version as name, dep.id
+    FROM latest_package_files lpf
+    JOIN package_file_dependency pfd ON pfd.package_file_id = lpf.id
+    JOIN dependency dep ON dep.id = pfd.dependency_id
+  ),
+  dep_dep(parent_id, dependency_id) AS (
+  	SELECT parent_id, dependency_id
+    FROM dep_dependency
+    WHERE parent_id IN (SELECT id FROM dir_deps)
+  UNION
+    SELECT d.parent_id, d.dependency_id
+    FROM dep_dependency d
+    JOIN dep_dep dd ON d.parent_id = dd.dependency_id
+  ),
+  trans_deps AS (
+  	SELECT
+    	parent.id as parent_id,
+      parent.name || '@' || parent.version as parent,
+      dep.name || '@' || dep.version as dep,
+    	dep.id as dep_id
+    FROM dep_dep
+    LEFT JOIN dependency parent ON parent.id = dep_dep.parent_id
+    LEFT JOIN dependency dep ON dep.id = dep_dep.dependency_id
+  ),
+  fin AS (
+  	SELECT
+      '"' || dd.path || '"->"' || dd.name || '";'
+    FROM dir_deps dd
+  UNION
+    SELECT
+      '"' || td.parent || '"->"' || td.dep || '";'
+     FROM trans_deps td
+  UNION
+    SELECT
+    	'{rank = same; "' || string_agg(lpf.path, '"; "') || '";}'
+    FROM latest_package_files lpf
+  )
+ SELECT * FROM fin;
+\echo '}'
+EOF

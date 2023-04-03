@@ -1,11 +1,11 @@
 module github.com/Clever/breakdown
 
-go 1.18
+go 1.19
 
 require (
 	github.com/Clever/breakdown/gen-go/models v0.0.0-00010101000000-000000000000
 	github.com/Clever/go-process-metrics v0.4.0
-	github.com/Clever/kayvee-go/v7 v7.6.0
+	github.com/Clever/kayvee-go/v7 v7.7.0
 	github.com/Clever/launch-gen v0.0.0-20230222233441-17c275320509
 	github.com/Clever/wag v4.1.0+incompatible
 	github.com/cespare/reflex v0.3.1
@@ -16,20 +16,39 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/jackc/pgconn v1.14.0
+	github.com/jackc/pgtype v1.14.0
+	github.com/jackc/pgx/v4 v4.18.1
 	github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
 	github.com/kyleconroy/sqlc v1.17.2
 	github.com/nomad-software/vend v1.0.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.34.0
-	go.opentelemetry.io/otel v1.9.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.9.0
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.9.0
-	go.opentelemetry.io/otel/sdk v1.9.0
-	go.opentelemetry.io/otel/trace v1.9.0
+	go.opentelemetry.io/otel v1.10.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.10.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.10.0
+	go.opentelemetry.io/otel/sdk v1.10.0
+	go.opentelemetry.io/otel/trace v1.10.0
+	golang.org/x/tools v0.7.0
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f
 )
 
 require (
-	github.com/Clever/wag/logging/wagclientlogger v0.0.0-20221024182247-2bf828ef51be // indirect
+	github.com/Clever/discovery-go v1.8.1 // indirect
+	github.com/Clever/wag/clientconfig/v9 v9.0.0-20230227191614-7aa97ba44ab1 // indirect
+	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 // indirect
+	github.com/donovanhide/eventsource v0.0.0-20171031113327-3ed64d21fb0b // indirect
+	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
+	github.com/jackc/pgio v1.0.0 // indirect
+	github.com/jackc/pgpassfile v1.0.0 // indirect
+	github.com/jackc/pgproto3/v2 v2.3.2 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.35.0 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
+)
+
+require (
+	github.com/Clever/breakdown/gen-go/client v0.1.0
+	github.com/Clever/wag/logging/wagclientlogger v0.0.0-20230110184825-edb52117e67a // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
@@ -97,7 +116,7 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.1-0.20191114132342-001aa27b4d11 // indirect
 	go.mongodb.org/mongo-driver v1.7.5 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.9.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.10.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.31.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.31.0 // indirect
 	go.opentelemetry.io/otel/metric v0.31.0 // indirect
@@ -107,12 +126,11 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp v0.0.0-20220428152302-39d4317da171 // indirect
-	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
+	golang.org/x/mod v0.9.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
-	golang.org/x/text v0.7.0 // indirect
-	golang.org/x/tools v0.1.12 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20220829175752-36a9c930ecbf // indirect
 	google.golang.org/grpc v1.49.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect

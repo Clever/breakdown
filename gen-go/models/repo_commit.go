@@ -12,33 +12,32 @@ import (
 	"github.com/go-openapi/validate"
 )
 
-// CustomData custom data object
+// RepoCommit A repo commit
 //
-// swagger:model CustomData
-type CustomData struct {
+// swagger:model RepoCommit
+type RepoCommit struct {
 
 	// First 8 chars of commit SHA
 	// Required: true
 	CommitSha *string `json:"commit_sha"`
 
-	// data
-	// Required: true
-	Data JSONObject `json:"data"`
+	// package files
+	PackageFiles RepoPackageFiles `json:"package_files,omitempty"`
 
 	// Full repo name "github.com/Clever/<name>"
 	// Required: true
 	RepoName *string `json:"repo_name"`
 }
 
-// Validate validates this custom data
-func (m *CustomData) Validate(formats strfmt.Registry) error {
+// Validate validates this repo commit
+func (m *RepoCommit) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateCommitSha(formats); err != nil {
 		res = append(res, err)
 	}
 
-	if err := m.validateData(formats); err != nil {
+	if err := m.validatePackageFiles(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -52,7 +51,7 @@ func (m *CustomData) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *CustomData) validateCommitSha(formats strfmt.Registry) error {
+func (m *RepoCommit) validateCommitSha(formats strfmt.Registry) error {
 
 	if err := validate.Required("commit_sha", "body", m.CommitSha); err != nil {
 		return err
@@ -61,11 +60,15 @@ func (m *CustomData) validateCommitSha(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *CustomData) validateData(formats strfmt.Registry) error {
+func (m *RepoCommit) validatePackageFiles(formats strfmt.Registry) error {
 
-	if err := m.Data.Validate(formats); err != nil {
+	if swag.IsZero(m.PackageFiles) { // not required
+		return nil
+	}
+
+	if err := m.PackageFiles.Validate(formats); err != nil {
 		if ve, ok := err.(*errors.Validation); ok {
-			return ve.ValidateName("data")
+			return ve.ValidateName("package_files")
 		}
 		return err
 	}
@@ -73,7 +76,7 @@ func (m *CustomData) validateData(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *CustomData) validateRepoName(formats strfmt.Registry) error {
+func (m *RepoCommit) validateRepoName(formats strfmt.Registry) error {
 
 	if err := validate.Required("repo_name", "body", m.RepoName); err != nil {
 		return err
@@ -83,7 +86,7 @@ func (m *CustomData) validateRepoName(formats strfmt.Registry) error {
 }
 
 // MarshalBinary interface implementation
-func (m *CustomData) MarshalBinary() ([]byte, error) {
+func (m *RepoCommit) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -91,8 +94,8 @@ func (m *CustomData) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary interface implementation
-func (m *CustomData) UnmarshalBinary(b []byte) error {
-	var res CustomData
+func (m *RepoCommit) UnmarshalBinary(b []byte) error {
+	var res RepoCommit
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
