@@ -21,7 +21,9 @@ func getQueries() (*Queries, *pgx.Conn, error) {
 		return nil, nil, err
 	}
 
-	return New(testDb), testDb, nil
+	testConn, _ := testDb.Acquire(context.Background())
+
+	return New(testDb), testConn.Conn(), nil
 }
 
 func TestHealthCheck(t *testing.T) {

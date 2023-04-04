@@ -11,15 +11,16 @@ import (
 	"github.com/go-openapi/swag"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-func getQueries() (*db.Queries, *pgx.Conn, error) {
+func getQueries() (*pgxpool.Pool, error) {
 	testDb, err := db.TestDB()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return db.New(testDb), testDb, nil
+	return testDb, nil
 }
 
 type controllerTest struct {
@@ -69,21 +70,23 @@ func TestDeploy(t *testing.T) {
 		},
 	}
 
-	qs, db, err := getQueries()
+	pool, err := getQueries()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	defer db.Close(ctx)
+	defer pool.Close()
 
 	testMC := MyController{
-		db:      db,
-		queries: qs,
-		l:       logger.NewMockCountLogger("test"),
+		dbPool: pool,
+		l:      logger.NewMockCountLogger("test"),
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			conn, _ := pool.Acquire(ctx)
+			defer conn.Release()
+			qs := db.New(conn.Conn())
 			err := tt.input(testMC)
 			if tt.expectError {
 				if err == nil {
@@ -172,8 +175,6 @@ func TestGetCommitInformation(t *testing.T) {
 					RepoName:  swag.String("breakdown"),
 				})
 
-				fmt.Printf("%+v", commit.Meta)
-
 				if err != nil {
 					return fmt.Errorf("error getting commit: %s", err)
 				}
@@ -191,22 +192,23 @@ func TestGetCommitInformation(t *testing.T) {
 		},
 	}
 
-	qs, db, err := getQueries()
+	db, err := getQueries()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()
-	defer db.Close(ctx)
+	defer db.Close()
 
 	testMC := MyController{
-		db:      db,
-		queries: qs,
-		l:       logger.NewMockCountLogger("test"),
+		dbPool: db,
+		l:      logger.NewMockCountLogger("test"),
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.input(db, testMC)
+			conn, _ := db.Acquire(ctx)
+			defer conn.Release()
+			err := tt.input(conn.Conn(), testMC)
 			if tt.expectError {
 				if err == nil {
 					t.Fatalf("expected error")

@@ -12,34 +12,43 @@ import (
 	"github.com/Clever/kayvee-go/v7/logger"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // MyController implements server.Controller
 type MyController struct {
 	launchConfig LaunchConfig
-	db           *pgx.Conn
-	queries      *db.Queries
+	dbPool       *pgxpool.Pool
 	l            logger.KayveeLogger
 }
 
 var _ server.Controller = MyController{}
 
-func (mc MyController) beginTX(ctx context.Context) (pgx.Tx, *db.Queries, error) {
-	tx, err := mc.db.Begin(ctx)
+func (mc MyController) beginTX(ctx context.Context) (pgx.Tx, *pgxpool.Conn, *db.Queries, error) {
+	conn, err := mc.dbPool.Acquire(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	qtx := mc.queries.WithTx(tx)
-	return tx, qtx, nil
+	tx, err := conn.Begin(ctx)
+
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	queries := db.New(conn)
+	qtx := queries.WithTx(tx)
+	return tx, conn, qtx, nil
 }
 
 // HealthCheck handles GET requests to /_health
 func (mc MyController) HealthCheck(ctx context.Context) error {
-	tx, qtx, err := mc.beginTX(ctx)
+	tx, conn, qtx, err := mc.beginTX(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		tx.Rollback(ctx)
+		conn.Release()
+	}()
 	if err != nil {
 		return err
 	}
@@ -51,11 +60,14 @@ func (mc MyController) HealthCheck(ctx context.Context) error {
 
 // PostUpload handles POSTs to /v1/upload
 func (mc MyController) PostUpload(ctx context.Context, i *models.RepoCommit) error {
-	tx, qtx, err := mc.beginTX(ctx)
-	defer tx.Rollback(ctx)
+	tx, conn, qtx, err := mc.beginTX(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %s", err)
 	}
+	defer func() {
+		tx.Rollback(ctx)
+		conn.Release()
+	}()
 
 	repoID, err := qtx.CreateRepo(ctx, *i.RepoName)
 	if err != nil {
@@ -231,13 +243,21 @@ func (mc MyController) PostUpload(ctx context.Context, i *models.RepoCommit) err
 
 // GetCommit handles GETs to /v1/commit
 func (mc MyController) GetCommit(ctx context.Context, i *models.GetCommitInformation) (*models.CommitInformation, error) {
-	qs := mc.queries
+	tx, conn, qtx, err := mc.beginTX(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+	defer func() {
+		tx.Rollback(ctx)
+		conn.Release()
+	}()
 
 	if len(*i.CommitSha) < 8 {
 		return nil, models.BadRequest{Message: "commit_sha not long enough"}
 	}
 
-	commit, err := qs.GetCommit(ctx, db.GetCommitParams{
+	commit, err := qtx.GetCommit(ctx, db.GetCommitParams{
 		Name:      *i.RepoName,
 		CommitSha: *i.CommitSha,
 	})
@@ -254,6 +274,8 @@ func (mc MyController) GetCommit(ctx context.Context, i *models.GetCommitInforma
 		return nil, err
 	}
 
+	tx.Commit(ctx)
+
 	return &models.CommitInformation{
 		CommitSha: commit.CommitSha,
 		RepoName:  *i.RepoName,
@@ -269,11 +291,14 @@ func (mc MyController) PostCustom(ctx context.Context, i *models.CustomData) err
 
 // PostDeploy handles POSTs to /v1/deploy
 func (mc MyController) PostDeploy(ctx context.Context, deploys *models.Deploys) error {
-	tx, qtx, err := mc.beginTX(ctx)
+	tx, conn, qtx, err := mc.beginTX(ctx)
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		tx.Rollback(ctx)
+		conn.Release()
+	}()
 
 	deploymentParams := make([]db.InsertDeploymentParams, 0)
 	for _, deploy := range *deploys {

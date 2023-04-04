@@ -13,12 +13,12 @@ import (
 	"github.com/Clever/kayvee-go/v7/logger"
 	"github.com/Clever/kayvee-go/v7/middleware"
 	"github.com/Clever/wag/swagger"
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 	trace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-func newDBFromLaunch(config LaunchConfig) (*pgx.Conn, error) {
+func newDBFromLaunch(config LaunchConfig) (*pgxpool.Pool, error) {
 	return db.FromConfig(db.Config{
 		User:         config.Env.PostgresUsername,
 		Password:     config.Env.PostgresPassword,
@@ -51,16 +51,15 @@ func main() {
 
 	launchConfig := InitLaunchConfig(&exporter)
 
-	pgConn, err := newDBFromLaunch(launchConfig)
+	pgPool, err := newDBFromLaunch(launchConfig)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	myController := MyController{
 		launchConfig: launchConfig,
-		db:           pgConn,
+		dbPool:       pgPool,
 		l:            logger.NewConcreteLogger("breakdown"),
-		queries:      db.New(pgConn),
 	}
 	s := server.New(myController, *addr)
 

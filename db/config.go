@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jackc/pgx/v4"
+	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 // Config options to connect to DB
@@ -18,7 +18,7 @@ type Config struct {
 }
 
 // TestDB creates a db when testing
-func TestDB() (*pgx.Conn, error) {
+func TestDB() (*pgxpool.Pool, error) {
 	port := "5433"
 	if os.Getenv("CI") != "" {
 		port = "5432"
@@ -33,7 +33,7 @@ func TestDB() (*pgx.Conn, error) {
 }
 
 // FromConfig generates a sql.DB based on a Config
-func FromConfig(cfg Config) (*pgx.Conn, error) {
+func FromConfig(cfg Config) (*pgxpool.Pool, error) {
 	url := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
 		cfg.User,
@@ -43,5 +43,5 @@ func FromConfig(cfg Config) (*pgx.Conn, error) {
 		cfg.DatabaseName,
 	)
 
-	return pgx.Connect(context.Background(), url)
+	return pgxpool.Connect(context.Background(), url)
 }
