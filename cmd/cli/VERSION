@@ -1,5 +1,6 @@
-v0.1.1
-Fix bug when setting local Go modules
+v0.1.2
+Increase timeout to 60 seconds when parsing go.mods
 
 Previously:
+* Fix bug when setting local Go modules
 * Initial release

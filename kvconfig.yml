@@ -7,4 +7,4 @@ routes:
       channel: "#breakdown-alerts"
       icon: ":rock-sus:"
       message: "error parsing file `%{path}` from `%{repo}@%{sha}`: `%{message}`"
-      user: "Dwayne 'The Rock' Johnson :tm:"
+      user: "Dwayne 'The Rock' Johnson"

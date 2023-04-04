@@ -63,11 +63,13 @@ func BreakdownGoMod(modLoc string, ch chan<- *models.RepoPackageFile) error {
 			ch <- p
 			return nil
 		case t := <-ticker.C:
-			dur := t.Sub(start)
-			log.Printf("processing %q %.2fs", modLoc, dur.Seconds())
-			if dur.Seconds() >= 15 {
+			dur := int(t.Sub(start).Seconds())
+			if dur%5 == 0 {
+				log.Printf("processing %q %ds", modLoc, dur)
+			}
+			if dur >= 60 {
 				ch <- &models.RepoPackageFile{
-					Error: fmt.Sprintf("processing file %s timed out at 15 seconds", modLoc),
+					Error: fmt.Sprintf("processing file %s timed out at 60 seconds", modLoc),
 					Path:  &modLoc,
 					Type:  &pkgType,
 				}
