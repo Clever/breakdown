@@ -144,7 +144,9 @@ func getGoModulesUsedByPackage(queue []*packages.Package) (map[string]*Pkg, erro
 				Name:     path,
 				Version:  v,
 				SeenPkgs: make(map[string]bool),
-				IsLocal:  pkg.Module.Replace != nil && strings.HasPrefix(pkg.Module.Replace.Path, "./"),
+				IsLocal: pkg.Module.Replace != nil &&
+					(strings.HasPrefix(pkg.Module.Replace.Path, "./") ||
+						strings.HasPrefix(pkg.Module.Replace.Path, "../")),
 			}
 			modPkg = modules[name]
 		}

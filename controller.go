@@ -249,11 +249,9 @@ func (mc MyController) GetCommit(ctx context.Context, i *models.GetCommitInforma
 	}
 
 	var meta models.JSONObject
-	if commit.Meta.Status&pgtype.Present > 0 {
-		err = commit.Meta.AssignTo(&meta)
-		if err != nil {
-			return nil, err
-		}
+	err = commit.Meta.AssignTo(&meta)
+	if err != nil {
+		return nil, err
 	}
 
 	return &models.CommitInformation{
