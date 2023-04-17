@@ -22,10 +22,9 @@ const (
 // BreakdownGoMod breaks down package file information
 func realBreakdownGoMod(modLoc string, ch chan<- *models.RepoPackageFile) error {
 	cfg := &packages.Config{
-		Tests:      true,
 		Mode:       pkgLoadMode,
 		Dir:        filepath.Dir(modLoc),
-		BuildFlags: []string{"-mod=readonly", "-tags", "tools"},
+		BuildFlags: []string{"-tags", "tools"},
 	}
 	pkgs, err := packages.Load(cfg, "./...", "./tools")
 	if err != nil {

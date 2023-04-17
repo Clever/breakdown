@@ -242,6 +242,9 @@ func parseLockfileV2(mod *Module, lockfile LockfileV2) (*Module, error) {
 			name = pkgInfo.Name
 		}
 		nameVer := fmt.Sprintf("%s@%s", name, pkgInfo.Version)
+		if len(name) == 0 {
+			nameVer = "@"
+		}
 		pkg := &Pkg{
 			Name:     name,
 			Version:  pkgInfo.Version,
