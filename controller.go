@@ -29,7 +29,9 @@ func (mc MyController) beginTX(ctx context.Context) (pgx.Tx, *pgxpool.Conn, *db.
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	tx, err := conn.Begin(ctx)
+	tx, err := conn.BeginTx(ctx, pgx.TxOptions{
+		IsoLevel: pgx.Serializable,
+	})
 
 	if err != nil {
 		return nil, nil, nil, err

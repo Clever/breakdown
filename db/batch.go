@@ -15,9 +15,13 @@ import (
 const createDependency = `-- name: CreateDependency :batchmany
 WITH ins AS (
     INSERT INTO dependency (
-        name, version, type, is_local
-    ) VALUES (
+        id, name, version, type, is_local
+    ) SELECT
+        COALESCE(MAX(id), 0) + 1,
         $1, $2, $3, $4
+    FROM dependency
+    WHERE NOT EXISTS (
+        SELECT 1 FROM dependency WHERE name = $1 AND version = $2 AND type = $3
     )
     ON CONFLICT DO NOTHING
     RETURNING id, name, version, type, is_local
@@ -26,7 +30,7 @@ SELECT id, name, version, type, is_local FROM dependency d
 WHERE d.name = $1
     AND d.version = $2
     AND d.type = $3
-UNION
+UNION ALL
 SELECT id, name, version, type, is_local FROM ins
 `
 

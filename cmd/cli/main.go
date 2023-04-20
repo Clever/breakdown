@@ -47,7 +47,7 @@ func findFiles(root string) []string {
 				return filepath.SkipDir
 			}
 		}
-		if d.Name() == "go.mod" || d.Name() == "package.json" {
+		if d.Name() == "go.sum" || d.Name() == "package.json" {
 			files = append(files, path)
 		}
 		return nil
@@ -92,7 +92,7 @@ func main() {
 	for _, file := range findFiles(*dirFlag) {
 		fileC := file
 		switch filepath.Base(file) {
-		case "go.mod":
+		case "go.sum":
 			g.Go(func() error {
 				log.Printf("[GOMOD] processing %s", fileC)
 				if err := BreakdownGoMod(fileC, pkgChan); err != nil {
