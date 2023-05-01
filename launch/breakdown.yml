@@ -4,15 +4,15 @@ env:
 - POSTGRES_PASSWORD
 - POSTGRES_USERNAME
 resources:
-  cpu: 0.25
-  max_mem: 0.5
+  cpu: 0.5
+  max_mem: 1.0
 expose:
 - name: default
   port: 80
   health_check:
     type: http
     path: /_health
-team: 'eng-infra'
+team: eng-infra
 autoscaling:
   metric: cpu
   metric_target: 50
@@ -29,3 +29,5 @@ mesh_config:
     state: mesh_only
   crossRegionRoute: non-sso
   setupInternalRoute: true
+  prod:
+    state: hybrid
