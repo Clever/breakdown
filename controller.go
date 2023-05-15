@@ -89,7 +89,7 @@ func (mc MyController) PostUpload(ctx context.Context, i *models.RepoCommit) err
 		if errors.As(err, &pgError) {
 			// Ignore duplicate commits error, don't reply with a message and fail quietly.
 			// CI __should__ check to see if a commit already exists but that's not working
-			// TODO
+			// TODO: https://clever.atlassian.net/browse/INFRANG-5398
 			if pgError.Code == "23505" {
 				return nil
 			}
