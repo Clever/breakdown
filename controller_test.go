@@ -190,6 +190,35 @@ func TestGetCommitInformation(t *testing.T) {
 				return nil
 			},
 		},
+		{
+			name:        "ignores dupe commits in upload",
+			expectError: false,
+			input: func(c *pgx.Conn, mc MyController) error {
+				var meta pgtype.JSONB
+				meta.Set(`{"test":"some_test"}`)
+				_, err := c.Exec(context.Background(), `
+					WITH new_repo AS (
+						INSERT INTO repo (name) VALUES ($1)
+						RETURNING id
+					)
+					INSERT INTO repo_commit (repo_id, commit_sha, commit_date, meta)
+					SELECT
+						nr.id, $2, CURRENT_TIMESTAMP, $3
+					FROM new_repo nr
+				`, "catapult", "22222222", meta)
+				if err != nil {
+					return fmt.Errorf("insert error: %s", err)
+				}
+
+				err = mc.PostUpload(context.Background(), &models.RepoCommit{
+					CommitSha:    swag.String("22222222"),
+					RepoName:     swag.String("catapult"),
+					PackageFiles: make(models.RepoPackageFiles, 0),
+				})
+
+				return err
+			},
+		},
 	}
 
 	db, err := getQueries()

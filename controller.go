@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/Clever/breakdown/gen-go/models"
 	"github.com/Clever/breakdown/gen-go/server"
 	"github.com/Clever/kayvee-go/v7/logger"
+	"github.com/jackc/pgconn"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -83,6 +85,15 @@ func (mc MyController) PostUpload(ctx context.Context, i *models.RepoCommit) err
 	})
 
 	if err != nil {
+		var pgError *pgconn.PgError
+		if errors.As(err, &pgError) {
+			// Ignore duplicate commits error, don't reply with a message and fail quietly.
+			// CI __should__ check to see if a commit already exists but that's not working
+			// TODO: https://clever.atlassian.net/browse/INFRANG-5398
+			if pgError.Code == "23505" {
+				return nil
+			}
+		}
 		return fmt.Errorf("creating repo commit: %s", err)
 	}
 
